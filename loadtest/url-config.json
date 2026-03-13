@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "scenarios": {
+    "samplingBurst": {
+      "requests": [
+        {
+          "requestName": "GenerateTelemetry",
+          "requestType": "URL",
+          "endpoint": "https://quest-ifa-sampling.azurewebsites.net/api/generatetelemetry?count=500",
+          "method": "GET"
+        }
+      ],
+      "csvDataSetConfigList": []
+    }
+  },
+  "testSetup": []
+}

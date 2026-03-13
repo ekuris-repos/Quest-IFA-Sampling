@@ -1,0 +1,6 @@
+version: v0.1
+testId: sampling-burst-test
+testName: Sampling Burst Test
+testPlan: sampling-burst.jmx
+description: Burst test to validate App Insights adaptive sampling
+engineInstances: 1

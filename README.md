@@ -1,6 +1,6 @@
 # Quest IFA Sampling
 
-Azure Functions app (.NET 8 Isolated) demonstrating Application Insights adaptive sampling configuration that can be toggled on/off via app settings **without redeployment** — only a restart is required.
+Azure Functions app (.NET 8 Isolated) demonstrating Application Insights sampling configuration that can be toggled on/off via app settings **without redeployment**. The sample keeps the Functions host as the owner of the request graph so end-to-end traces stay connected after a restart-only configuration change.
 
 ## Quick Start
 
@@ -30,14 +30,16 @@ func start
 
 ## How Sampling Works
 
-Sampling is configured **entirely via app settings**, not in `host.json`. The `host.json` sampling is disabled (`"isEnabled": false`) so that code-based configuration in `Program.cs` takes full control.
+Sampling is configured from app settings read by the worker at startup. The sample uses direct worker-side Application Insights for custom events and traces, but it intentionally suppresses the worker package's extra invocation dependency item so the Functions host remains the owner of the request graph.
+
+The `host.json` sampling block stays disabled so the host doesn't add a second sampling policy on top of the worker-side configuration.
 
 ### App Settings
 
 | Setting | Default | Description |
 |---|---|---|
 | `Sampling__Enabled` | `true` | Master toggle — set to `false` to disable all sampling |
-| `Sampling__Percentage` | `100` | Sampling percentage (100 = keep everything) |
+| `Sampling__Percentage` | `100` | Reported by the diagnostics endpoint. Reserved for future fixed-percentage examples; the current sample uses rate-limited adaptive sampling. |
 | `Sampling__ExcludedTypes` | `Request;Exception` | Semicolon-separated telemetry types to always keep |
 
 ### Toggling Sampling Without Redeployment
@@ -45,13 +47,13 @@ Sampling is configured **entirely via app settings**, not in `host.json`. The `h
 **In Azure:**
 1. Go to your Function App in the Azure Portal
 2. Navigate to **Configuration > Application Settings**
-3. Change `Sampling__Enabled` to `false` (or adjust `Sampling__Percentage`)
+3. Change `Sampling__Enabled` to `false`
 4. Save and **Restart** the Function App
 5. Sampling changes take effect immediately — no code redeploy needed
 
 **Locally:**
 1. Edit `local.settings.json`
-2. Change the `Sampling__Enabled` or `Sampling__Percentage` values
+2. Change the `Sampling__Enabled` value
 3. Restart the function host (`func start`)
 
 ### Excluded Types
@@ -79,9 +81,10 @@ The `Sampling__ExcludedTypes` setting accepts a semicolon-separated list of tele
 
 ## Key Design Decisions
 
-1. **`host.json` sampling is disabled** — `"isEnabled": false` ensures the built-in host sampling doesn't interfere with our code-based configuration.
-2. **`Program.cs` reads from `IConfiguration`** — All sampling settings come from app settings/environment variables, which are read at startup.
-3. **Restart-only changes** — Because settings are read at startup, changing app settings and restarting applies new sampling behavior without redeploying code.
+1. **The host keeps ownership of request telemetry** — The sample avoids the worker package's extra invocation dependency item so upstream API calls stay in the same Application Insights graph as the Function execution.
+2. **The worker still sends custom telemetry directly** — `TelemetryClient` events and traces continue to flow from the worker, with the sample's worker-side sampling chain applied to them.
+3. **Default Worker Service adaptive sampling is disabled** — This prevents the SDK default from stacking with the sample's custom telemetry processor chain.
+4. **Restart-only changes** — Because settings are read at startup, changing app settings and restarting applies new sampling behavior without redeploying code.
 
 ## Demo Walkthrough
 
@@ -124,8 +127,8 @@ curl http://localhost:7071/api/GenerateTelemetry?count=50
 ```
 Now all 50 events will appear in Application Insights — nothing is sampled.
 
-### Step 6 — (Optional) Adjust sampling percentage
-Set `Sampling__Enabled` back to `true` and change `Sampling__Percentage` to a value like `50`, restart, and repeat to show partial sampling.
+### Step 6 — Verify the request graph stays intact
+Trigger the function from an upstream instrumented API or inspect the end-to-end transaction view in Application Insights. The Function request should remain attached to the upstream API dependency graph instead of appearing as a second worker-generated invocation node.
 
 ---
 

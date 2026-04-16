@@ -16,6 +16,11 @@
     <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="QuestIFASampling.Tests\**\*.cs" />
+    <EmbeddedResource Remove="QuestIFASampling.Tests\**\*" />
+    <None Remove="QuestIFASampling.Tests\**\*" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
